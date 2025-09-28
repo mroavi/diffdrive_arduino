@@ -1,35 +1,39 @@
 #ifndef DIFFDRIVE_ARDUINO_ARDUINO_COMMS_H
 #define DIFFDRIVE_ARDUINO_ARDUINO_COMMS_H
 
-#include <serial/serial.h>
+#include <string>
 #include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
+#include <stdexcept>
 
 class ArduinoComms
 {
-
-
 public:
+  ArduinoComms() : fd_(-1), i2c_address_(0x08) {}
 
-  ArduinoComms()
-  {  }
+  ArduinoComms(const std::string &i2c_device, int32_t i2c_address, int32_t /*timeout_ms*/)
+      : fd_(-1), i2c_address_(i2c_address)
+  {
+    setup(i2c_device, i2c_address, 0);
+  }
 
-  ArduinoComms(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms)
-      : serial_conn_(serial_device, baud_rate, serial::Timeout::simpleTimeout(timeout_ms))
-  {  }
+  void setup(const std::string &i2c_device, int32_t i2c_address, int32_t timeout_ms);
 
-  void setup(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms);
   void sendEmptyMsg();
   void readEncoderValues(int &val_1, int &val_2);
   void setMotorValues(int val_1, int val_2);
   void setPidValues(float k_p, float k_d, float k_i, float k_o);
 
-  bool connected() const { return serial_conn_.isOpen(); }
+  bool connected() const { return fd_ >= 0; }
 
-  std::string sendMsg(const std::string &msg_to_send, bool print_output = false);
-
+  std::string sendMsg(const std::string &msg_to_send, bool print_output = true);
 
 private:
-  serial::Serial serial_conn_;  ///< Underlying serial connection 
+  int fd_;            ///< File descriptor for I²C device
+  int i2c_address_;   ///< Arduino I²C address (e.g., 0x08)
 };
 
 #endif // DIFFDRIVE_ARDUINO_ARDUINO_COMMS_H
